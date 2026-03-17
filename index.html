@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="description" content="Постулат Логоса — симулятор решения конфликтов">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Постулат Логоса</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{--ink:#1a1a2e;--paper:#f4f0e8;--gold:#c9952a;--grey:#8a8a9a;--border:rgba(26,26,46,0.15);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Spectral',serif;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}
+.logo{font-size:2.4rem;font-weight:300;font-style:italic;letter-spacing:-0.02em;margin-bottom:8px;text-align:center;}
+.sub{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--grey);letter-spacing:0.12em;text-transform:uppercase;text-align:center;margin-bottom:52px;}
+.cards{display:flex;flex-direction:column;gap:20px;width:100%;max-width:380px;}
+.card{border:1.5px solid var(--ink);padding:28px 28px 24px;text-decoration:none;color:var(--ink);transition:background .15s,transform .15s;display:block;}
+.card:hover{background:var(--ink);color:var(--paper);transform:translateY(-2px);}
+.card:hover .tag{color:rgba(255,255,255,0.5);}
+.card:hover .arrow{color:rgba(255,255,255,0.7);}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;}
+.card-title{font-size:1.15rem;font-weight:600;letter-spacing:0.01em;}
+.arrow{font-size:1.1rem;color:var(--grey);}
+.card-desc{font-size:0.8rem;line-height:1.6;color:#555;margin-bottom:12px;}
+.card:hover .card-desc{color:rgba(255,255,255,0.75);}
+.tag{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--gold);letter-spacing:0.08em;text-transform:uppercase;}
+.divider{width:40px;height:1px;background:var(--border);margin:4px 0 14px;}
+</style>
+</head>
+<body>
+<div class="logo">Постулат Логоса</div>
+<div class="sub">Симулятор решения конфликтов</div>
+
+<div class="cards">
+  <a class="card" href="postulate-column.html">
+    <div class="card-head">
+      <span class="card-title">Версия с колонкой</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="divider"></div>
+    <div class="card-desc">Поле из n квадратов n×n, расположенных вертикально. Конфликты в колонке решаются горизонтальными перестановками.</div>
+    <div class="tag">n квадратов · 1D поле</div>
+  </a>
+
+  <a class="card" href="postulate-sudoku.html">
+    <div class="card-head">
+      <span class="card-title">Версия судоку</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="divider"></div>
+    <div class="card-desc">Полное поле n²×n² с n² домами. Конфликты по колонке — горизонталь, по строке — вертикаль. Двухфазный алгоритм.</div>
+    <div class="tag">судоку · 2D поле · 2 фазы</div>
+  </a>
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js', {scope: './'})
+    .catch(e=>console.warn('SW error:',e));
+}
+</script>
+</body>
+</html>
