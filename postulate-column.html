@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Логос">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="/Postulat-of-Logos/manifest.json">
+<link rel="apple-touch-icon" href="/Postulat-of-Logos/icons/icon-192.png">
 <title>Постулат Логоса</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -842,8 +842,10 @@ document.getElementById('speed').addEventListener('input',function(){
 initGame();
 </script>
 <script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js', {scope: './'}).catch(e=>console.warn('SW:',e));
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/Postulat-of-Logos/sw.js', {scope: '/Postulat-of-Logos/'})
+    .catch(e => console.warn('SW:', e));
 }
 </script>
 </body>
