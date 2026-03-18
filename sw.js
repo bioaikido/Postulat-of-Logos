@@ -1,4 +1,4 @@
-const CACHE = 'postulate-logos-v2';
+const CACHE = 'postulate-logos-v3';
 
 const PRECACHE = [
   './',
