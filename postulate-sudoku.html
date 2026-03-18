@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Логос">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Постулат Логоса</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --ink:#1a1a2e; --paper:#f4f0e8; --gold:#c9952a; --gold-light:#e8c13a;
+  --red:#c0392b; --blue:#2563a8; --green:#1a7a4a; --grey:#8a8a9a;
+  --border:rgba(26,26,46,0.15); --quad-a:#f9f6ee; --quad-b:#eae4d4;
+  --v1:#c0392b;--v2:#1a5ea8;--v3:#1a7a4a;--v4:#7d3c98;--v5:#c97a10;--v6:#1a7a8a;
+  --v7:#b03060;--v8:#2e6b1a;--v9:#7a4a00;--v10:#16537e;--v11:#5d4037;--v12:#00695c;
+  --v13:#ad1457;--v14:#37474f;--v15:#4527a0;--v16:#c62828;--v17:#2e7d32;--v18:#1565c0;
+  --v19:#6a1f10;--v20:#1b5e20;--v21:#0d47a1;--v22:#880e4f;--v23:#4e342e;--v24:#006064;
+  --v25:#bf360c;--v26:#33691e;--v27:#283593;--v28:#4a148c;--v29:#1a237e;--v30:#004d40;
+  --v31:#b71c1c;--v32:#1b5e20;--v33:#311b92;--v34:#e65100;--v35:#827717;--v36:#01579b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Spectral',serif;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;}
+
+header{border-bottom:2px solid var(--ink);padding:8px 20px;display:flex;align-items:baseline;gap:14px;flex-shrink:0;}
+header h1{font-size:1.3rem;font-weight:300;font-style:italic;letter-spacing:-0.02em;}
+header span{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--grey);letter-spacing:0.1em;text-transform:uppercase;}
+
+.body-wrap{display:flex;flex-direction:column;flex:1;}
+.top-area{display:flex;flex:1;}
+.board-panel{padding:10px 16px;display:flex;flex-direction:column;gap:8px;flex:1;}
+
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+.controls label{font-size:0.76rem;color:var(--grey);}
+.controls input[type=number]{width:44px;padding:3px 5px;border:1.5px solid var(--ink);font-family:'JetBrains Mono',monospace;font-size:0.9rem;background:var(--paper);color:var(--ink);text-align:center;}
+.controls input:focus{outline:none;border-color:var(--gold);}
+.deck-info{font-family:'JetBrains Mono',monospace;font-size:0.64rem;color:var(--grey);}
+
+button{font-family:'Spectral',serif;font-size:0.8rem;padding:4px 11px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+button:hover{background:var(--ink);color:var(--paper);}
+button.primary{background:var(--ink);color:var(--paper);}
+button.primary:hover{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+button:disabled{opacity:0.3;cursor:default;pointer-events:none;}
+button.solve-btn{background:var(--red);color:#fff;border-color:var(--red);font-weight:600;animation:pulse 1.2s ease infinite;}
+button.solve-btn:hover{background:#a02020;border-color:#a02020;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.45);}50%{box-shadow:0 0 0 7px rgba(192,57,43,0);}}
+
+/* ── SUDOKU BOARD ── */
+#board-wrap{align-self:flex-start;}
+/* Outer grid: N×N blocks */
+.sudoku-grid{display:inline-grid;border:3px solid var(--ink);gap:0;}
+/* Each block: N×N cells */
+.quad-block{display:grid;border:0;}
+.quad-block:nth-child(odd){background:var(--quad-a);}
+.quad-block:nth-child(even){background:var(--quad-b);}
+
+.cell{border:1px solid rgba(26,26,46,.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;transition:background .15s,transform .15s;user-select:none;background:transparent;}
+.cell.empty{color:rgba(26,26,46,.18);font-weight:400;}
+.cell.empty:hover{background:rgba(201,149,42,.14);}
+.cell.filled-pre{font-style:italic;opacity:.82;}
+.cell.sel-target{background:rgba(201,149,42,.18)!important;}
+.cell.conflict-col{background:rgba(192,57,43,.18)!important;}
+.cell.conflict-row{background:rgba(37,99,168,.18)!important;}
+.cell.conflict-both{background:rgba(150,30,150,.22)!important;}
+.cell.just-moved{background:rgba(232,193,58,.55)!important;transform:scale(1.08);z-index:2;box-shadow:0 3px 12px rgba(201,149,42,.4);}
+.cell.replay-hl{outline:2px solid var(--gold);z-index:3;}
+
+.cell[data-val="1"]{color:var(--v1)}.cell[data-val="2"]{color:var(--v2)}.cell[data-val="3"]{color:var(--v3)}
+.cell[data-val="4"]{color:var(--v4)}.cell[data-val="5"]{color:var(--v5)}.cell[data-val="6"]{color:var(--v6)}
+.cell[data-val="7"]{color:var(--v7)}.cell[data-val="8"]{color:var(--v8)}.cell[data-val="9"]{color:var(--v9)}
+.cell[data-val="10"]{color:var(--v10)}.cell[data-val="11"]{color:var(--v11)}.cell[data-val="12"]{color:var(--v12)}
+.cell[data-val="13"]{color:var(--v13)}.cell[data-val="14"]{color:var(--v14)}.cell[data-val="15"]{color:var(--v15)}
+.cell[data-val="16"]{color:var(--v16)}.cell[data-val="17"]{color:var(--v17)}.cell[data-val="18"]{color:var(--v18)}
+.cell[data-val="19"]{color:var(--v19)}.cell[data-val="20"]{color:var(--v20)}.cell[data-val="21"]{color:var(--v21)}
+.cell[data-val="22"]{color:var(--v22)}.cell[data-val="23"]{color:var(--v23)}.cell[data-val="24"]{color:var(--v24)}
+.cell[data-val="25"]{color:var(--v25)}.cell[data-val="26"]{color:var(--v26)}.cell[data-val="27"]{color:var(--v27)}
+.cell[data-val="28"]{color:var(--v28)}.cell[data-val="29"]{color:var(--v29)}.cell[data-val="30"]{color:var(--v30)}
+.cell[data-val="31"]{color:var(--v31)}.cell[data-val="32"]{color:var(--v32)}.cell[data-val="33"]{color:var(--v33)}
+.cell[data-val="34"]{color:var(--v34)}.cell[data-val="35"]{color:var(--v35)}.cell[data-val="36"]{color:var(--v36)}
+
+.solver-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0;}
+#step-info{font-family:'JetBrains Mono',monospace;font-size:0.64rem;color:var(--grey);min-width:80px;}
+.speed-row{display:flex;align-items:center;gap:5px;}
+.speed-row label{font-size:0.68rem;color:var(--grey);}
+input[type=range]{width:76px;accent-color:var(--ink);}
+
+#status{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--grey);min-height:1.1em;flex-shrink:0;}
+#status.ok{color:var(--green);}#status.err{color:var(--red);}#status.solving{color:var(--gold);}
+#status.info{color:var(--blue);}
+
+#hand-section{flex-shrink:0;}
+#hand-section h4{font-size:0.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:400;margin-bottom:5px;}
+#hand-wrap{display:flex;flex-wrap:wrap;gap:5px;min-height:54px;padding:6px 8px;border:1px dashed var(--border);background:rgba(26,26,46,.02);}
+.hand-card{width:38px;height:50px;border:1.5px solid;background:var(--paper);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .12s,transform .1s,box-shadow .12s;user-select:none;border-radius:2px;}
+.hand-card:hover{transform:translateY(-3px);box-shadow:0 4px 10px rgba(26,26,46,.16);filter:brightness(.9);}
+.hand-card.selected{background:var(--gold-light)!important;transform:translateY(-5px);box-shadow:0 6px 16px rgba(201,149,42,.35);}
+
+/* Log bar */
+.log-bar{border-top:2px solid var(--ink);flex-shrink:0;display:flex;align-items:stretch;height:88px;}
+.log-bar-label{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:0.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);font-family:'JetBrains Mono',monospace;padding:6px 5px;border-right:1px solid var(--border);flex-shrink:0;}
+#log{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;align-items:center;padding:4px 8px;white-space:nowrap;}
+.log-entry{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:0.62rem;padding:2px 8px;border-right:1px solid var(--border);color:#666;cursor:default;flex-shrink:0;height:100%;transition:background .1s;}
+.log-entry:hover{background:rgba(26,26,46,.04);}
+.log-entry.log-move{color:var(--gold);}
+.log-entry.log-ok{color:var(--green);}
+.log-entry.log-err{color:var(--red);}
+.log-entry.log-info{color:var(--blue);}
+.log-entry.log-cur{background:rgba(201,149,42,.18);font-weight:600;}
+
+/* Modal */
+.info-btn{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:0.78rem;width:28px;height:28px;padding:0;border:1.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:var(--ink);flex-shrink:0;}
+.info-btn:hover{background:var(--ink);color:var(--paper);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,.55);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper);border:2px solid var(--ink);max-width:440px;width:90%;max-height:82vh;overflow-y:auto;padding:24px 24px 20px;position:relative;}
+.modal-close{position:absolute;top:10px;right:12px;font-family:'JetBrains Mono',monospace;font-size:1.1rem;background:none;border:none;cursor:pointer;color:var(--grey);padding:2px 6px;}
+.modal-close:hover{color:var(--ink);}
+.postulate{border-left:3px solid var(--gold);padding:0 0 0 14px;margin-bottom:16px;}
+.postulate h2{font-size:0.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:var(--gold);}
+.postulate p{font-size:0.78rem;line-height:1.65;color:#444;font-style:italic;margin-bottom:5px;}
+.rules h3{font-size:0.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:7px;font-weight:400;}
+.rules ol{padding-left:14px;display:flex;flex-direction:column;gap:5px;}
+.rules li{font-size:0.74rem;line-height:1.5;color:#333;}
+.rules li strong{color:var(--ink);font-weight:600;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Постулат Логоса</h1>
+  <span>Симулятор решения конфликтов</span>
+  <button class="info-btn" onclick="document.getElementById('info-modal').classList.add('open')">?</button>
+</header>
+
+<div class="body-wrap">
+  <div class="top-area">
+    <div class="board-panel">
+      <div class="controls">
+        <label>n =</label>
+        <input type="number" id="n-input" min="2" max="4" value="3">
+        <button class="primary" onclick="initGame()">Создать поле</button>
+        <button onclick="clearBoard()">Очистить</button>
+        <span class="deck-info" id="deck-info"></span>
+      </div>
+
+      <div id="board-wrap"></div>
+
+      <div class="solver-row">
+        <button id="solve-btn" class="solve-btn" onclick="startSolver()" disabled>▶ Solve</button>
+        <button id="back-btn" onclick="stepBack()" disabled>◀ Back</button>
+        <button id="fwd-btn"  onclick="stepForward()" disabled>Fwd ▶</button>
+        <span id="step-info"></span>
+        <div class="speed-row">
+          <label>Скорость:</label>
+          <input type="range" id="speed" min="200" max="3000" value="1000" step="200">
+          <span id="speed-label" style="font-family:monospace;font-size:0.66rem;color:var(--grey)">1000ms</span>
+        </div>
+      </div>
+
+      <div id="status">Задайте n и создайте поле.</div>
+
+      <div id="hand-section">
+        <h4>Рука — карты колоды</h4>
+        <div id="hand-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-bar">
+    <div class="log-bar-label">История</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="info-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('info-modal').classList.remove('open')">✕</button>
+    <div class="postulate">
+      <h2>Постулат Логоса</h2>
+      <p>В поле n²×n² квадратов, заполненных картами 1..n², цепочка решений конфликтов однородна: каждое звено идентично первому по длине шага и направлению перестановки.</p>
+    </div>
+    <div class="rules">
+      <h3>Правила</h3>
+      <ol>
+        <li><strong>Поле:</strong> n²×n² ячеек, разбитых на n²  квадратов n×n (как судоку).</li>
+        <li><strong>Колода:</strong> n² наборов карт 1..n². 80% поля заполнено по правилам судоку.</li>
+        <li><strong>Запрет:</strong> нельзя поставить карту, если значение уже есть в том же доме, строке или колонке.</li>
+        <li><strong>Конфликт по колонке</strong> — разрешается горизонтальными перемещениями внутри домов.</li>
+        <li><strong>Конфликт по строке</strong> — разрешается вертикальными перемещениями внутри домов.</li>
+        <li><strong>Сначала</strong> решаются все конфликты по колонкам, затем по строкам.</li>
+        <li><strong>Цепочка однородна:</strong> шаг и направление фиксируются при первом ходе.</li>
+        <li><strong>Правило 4:</strong> последняя активная карта не двигается — двигается другая.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────
+let N = 3;          // n; field is N²×N² with N²×N² cells
+let S;              // = N² (side length of field, also number of values)
+let board = [];     // board[i] = {value, source:'pre'|'player'} | null
+let hand  = [];
+let selectedCard = null;
+let solving = false;
+let lastMoved = -1;
+let protected_ = new Set();
+let chainStep = null;   // column delta (col conflict) or row delta (row conflict)
+let chainMoves = 0;
+let chainPhase = null;  // 'col' or 'row'
+
+let history = [];
+let histPos  = -1;
+let liveHand = [];
+
+// ── GEOMETRY ──────────────────────────────────────────────
+// Field: S×S cells (S = N²)
+// Blocks: N² blocks of N×N, arranged in N×N grid of blocks
+// Cell index: row * S + col  (row, col in 0..S-1)
+
+function totalCells(){ return S*S; }
+
+function rowOf(idx){
+  const r=Math.floor(idx/S);
+  return Array.from({length:S},(_,c)=>r*S+c);
+}
+function colOf(idx){
+  const c=idx%S;
+  return Array.from({length:S},(_,r)=>r*S+c);
+}
+
+// Block (house) of cell idx
+// Block row = Math.floor(row/N), Block col = Math.floor(col/N)
+function blockIdOf(idx){
+  const r=Math.floor(idx/S), c=idx%S;
+  const br=Math.floor(r/N), bc=Math.floor(c/N);
+  return br*N+bc;
+}
+function blockCells(bid){
+  const br=Math.floor(bid/N), bc=bid%N;
+  const cells=[];
+  for(let r=br*N;r<br*N+N;r++)
+    for(let c=bc*N;c<bc*N+N;c++)
+      cells.push(r*S+c);
+  return cells;
+}
+function blockOf(idx){ return blockCells(blockIdOf(idx)); }
+
+// ── SUDOKU VALIDITY ────────────────────────────────────────
+function canPlaceSudoku(pos,val){
+  for(const i of rowOf(pos))   if(i!==pos&&board[i]&&board[i].value===val) return false;
+  for(const i of colOf(pos))   if(i!==pos&&board[i]&&board[i].value===val) return false;
+  for(const i of blockOf(pos)) if(i!==pos&&board[i]&&board[i].value===val) return false;
+  return true;
+}
+
+// ── INIT ──────────────────────────────────────────────────
+function initGame(){
+  N=Math.max(2,Math.min(4,parseInt(document.getElementById('n-input').value)||3));
+  document.getElementById('n-input').value=N;
+  S=N*N;
+  board=Array(totalCells()).fill(null);
+  hand=[];selectedCard=null;history=[];histPos=-1;liveHand=[];
+  lastMoved=-1;protected_=new Set();chainStep=null;chainMoves=0;chainPhase=null;
+  solving=false;
+  clearLog();
+
+  // Build deck: S copies of values 1..S
+  const deck=[];
+  for(let v=1;v<=S;v++) for(let k=0;k<S;k++) deck.push(v);
+  shuffle(deck);
+
+  // Fill 80%, keep at least 1 copy of each value for hand
+  const target=Math.floor(totalCells()*.80);
+  // Fill using backtracking-lite: iterate cells in order, try values
+  const valCount={};
+  for(let v=1;v<=S;v++) valCount[v]=0;
+
+  const positions=Array.from({length:totalCells()},(_,i)=>i);
+  shuffle(positions);
+
+  const used=new Set();
+  let placed=0;
+  for(let pi=0;pi<positions.length&&placed<target;pi++){
+    const pos=positions[pi];
+    for(let di=0;di<deck.length;di++){
+      if(used.has(di)) continue;
+      const v=deck[di];
+      if(valCount[v]>=S-1) continue; // reserve 1 for hand
+      if(canPlaceSudoku(pos,v)){
+        board[pos]={value:v,source:'pre'};
+        used.add(di); valCount[v]++; placed++; break;
+      }
+    }
+  }
+
+  hand=[];
+  for(let di=0;di<deck.length;di++) if(!used.has(di)) hand.push(deck[di]);
+  hand.sort((a,b)=>a-b);
+  liveHand=[...hand];
+
+  document.getElementById('deck-info').textContent=
+    `S=${S} · поле:${placed}/${totalCells()} · рука:${hand.length}`;
+  setStatus('Поле создано. Выберите карту из руки.');
+  updateSolveBtn(); render(); renderHand(); updateNavButtons();
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+}
+
+function clearBoard(){
+  board=Array(S*S).fill(null);
+  hand=[];selectedCard=null;history=[];histPos=-1;liveHand=[];
+  lastMoved=-1;protected_=new Set();chainStep=null;chainMoves=0;chainPhase=null;
+  solving=false;
+  clearLog(); render(); renderHand();
+  setStatus('Поле очищено.');
+  document.getElementById('deck-info').textContent='';
+  updateSolveBtn(); updateNavButtons();
+}
+
+// ── HAND ──────────────────────────────────────────────────
+function renderHand(){
+  const wrap=document.getElementById('hand-wrap');
+  wrap.innerHTML='';
+  if(!hand.length){
+    wrap.innerHTML='<span style="font-size:.68rem;color:var(--grey);font-family:monospace">Рука пуста</span>';
+    return;
+  }
+  hand.forEach((v,i)=>{
+    const el=document.createElement('div');
+    el.className='hand-card';
+    el.textContent=v;
+    el.style.color=`var(--v${v})`;
+    el.style.borderColor=`var(--v${v})`;
+    if(selectedCard&&selectedCard.handIdx===i) el.classList.add('selected');
+    el.addEventListener('click',()=>selectCard(i));
+    wrap.appendChild(el);
+  });
+}
+
+function selectCard(handIdx){
+  if(solving) return;
+  if(histPos>=0&&histPos<history.length) restoreLive();
+  if(selectedCard&&selectedCard.handIdx===handIdx){
+    selectedCard=null;
+  } else {
+    selectedCard={value:hand[handIdx],handIdx};
+  }
+  renderHand(); render();
+  setStatus(selectedCard?`Карта ${selectedCard.value} выбрана. Нажмите на ячейку.`:'Выбор снят.');
+}
+
+function placeCardOnCell(pos){
+  if(solving) return;
+  if(!selectedCard){setStatus('Сначала выберите карту из руки.','err');return;}
+  if(board[pos]){setStatus('Ячейка занята.','err');return;}
+
+  const val=selectedCard.value;
+  // Check sudoku rules: no same value in row, col, block
+  const rowConflict =rowOf(pos).some(i=>i!==pos&&board[i]&&board[i].value===val);
+  const colConflict =colOf(pos).some(i=>i!==pos&&board[i]&&board[i].value===val);
+  const blkConflict =blockOf(pos).some(i=>i!==pos&&board[i]&&board[i].value===val);
+  if(blkConflict){setStatus(`Нельзя: ${val} уже есть в этом доме.`,'err');return;}
+
+  board[pos]={value:val,source:'player'};
+  hand=hand.filter((_,i)=>i!==selectedCard.handIdx);
+  selectedCard=null;
+
+  // Clean slate for solver
+  history=[];histPos=0;liveHand=[...hand];
+  lastMoved=pos;protected_=new Set([pos]);
+  chainStep=null;chainMoves=0;chainPhase=null;
+
+  addLog(`→ ${val} яч.${pos+1}`,'log-move');
+
+  const hasCol=colOf(pos).some(i=>i!==pos&&board[i]&&board[i].value===val);
+  const hasRow=rowOf(pos).some(i=>i!==pos&&board[i]&&board[i].value===val);
+  if(hasCol||hasRow){
+    const what=[hasCol?'колонка':'',hasRow?'строка':''].filter(Boolean).join('+');
+    setStatus(`Конфликт (${what})! Нажмите Solve.`,'err');
+    addLog(`Конфликт: ${what}`,'log-err');
+  } else {
+    setStatus(`Карта ${val} размещена. Выберите следующую.`,'ok');
+  }
+
+  updateSolveBtn(); render(); renderHand(); updateNavButtons();
+}
+
+// ── CONFLICTS ─────────────────────────────────────────────
+function getColConflicts(){
+  const conf=new Set();
+  for(let c=0;c<S;c++){
+    const col=colOf(c);
+    for(let a=0;a<col.length;a++){
+      if(!board[col[a]]) continue;
+      for(let b=a+1;b<col.length;b++){
+        if(!board[col[b]]) continue;
+        if(board[col[a]].value===board[col[b]].value){conf.add(col[a]);conf.add(col[b]);}
+      }
+    }
+  }
+  return conf;
+}
+
+function getRowConflicts(){
+  const conf=new Set();
+  for(let r=0;r<S;r++){
+    const row=rowOf(r*S);
+    for(let a=0;a<row.length;a++){
+      if(!board[row[a]]) continue;
+      for(let b=a+1;b<row.length;b++){
+        if(!board[row[b]]) continue;
+        if(board[row[a]].value===board[row[b]].value){conf.add(row[a]);conf.add(row[b]);}
+      }
+    }
+  }
+  return conf;
+}
+
+function hasConflicts(){ return getColConflicts().size>0||getRowConflicts().size>0; }
+function updateSolveBtn(){
+  document.getElementById('solve-btn').disabled=!hasConflicts()||solving;
+}
+
+// ── SOLVER ────────────────────────────────────────────────
+// Phase 1: resolve ALL column conflicts (move horizontally within block)
+// Phase 2: resolve ALL row conflicts (move vertically within block)
+// One step per Solve press, chain rule enforced
+
+function startSolver(){ if(solving) return; runSolverAsync(); }
+
+async function runSolverAsync(){
+  solving=true;
+  document.getElementById('solve-btn').disabled=true;
+  setStatus('Сольвер...','solving');
+  const spd=parseInt(document.getElementById('speed').value);
+
+  // Determine phase: column conflicts first
+  const colConfs=collectColumnConflicts();
+  const rowConfs=collectRowConflicts();
+
+  if(!colConfs.length && !rowConfs.length){
+    setStatus('✓ Конфликтов нет.','ok');
+    solving=false; render(); updateNavButtons(); return;
+  }
+
+  // Phase: column conflicts first; switch to row only when columns are clean
+  if(colConfs.length>0){
+    if(chainPhase!=='col'){
+      // Entering column phase — reset chain
+      chainPhase='col'; chainStep=null; chainMoves=0;
+    }
+    await doOneStep(colConfs,'col',spd);
+  } else if(rowConfs.length>0){
+    if(chainPhase!=='row'){
+      // Switching to row phase — reset chain
+      chainPhase='row'; chainStep=null; chainMoves=0;
+      addLog('── фаза: строки ──','log-info');
+    }
+    await doOneStep(rowConfs,'row',spd);
+  }
+
+  solving=false;
+  liveHand=[...hand];
+
+  const stillCol=collectColumnConflicts().length;
+  const stillRow=collectRowConflicts().length;
+
+  if(!stillCol&&!stillRow){
+    const summary=`✓ Цепочка: ${chainMoves} ходов, шаг ${chainStep!=null?(chainStep>0?'+':'')+chainStep:'—'}`;
+    setStatus(summary,'ok');
+    addLog(summary,'log-ok');
+    chainStep=null;chainMoves=0;chainPhase=null;
+  } else {
+    const phase=stillCol?'колонки':'строки';
+    setStatus(`Ход #${chainMoves}. Конфликты (${phase}) — нажмите Solve.`,'err');
+    document.getElementById('solve-btn').disabled=false;
+  }
+  render(); updateNavButtons();
+}
+
+function collectColumnConflicts(){
+  const list=[];
+  for(let c=0;c<S;c++){
+    const col=colOf(c);
+    for(let a=0;a<col.length;a++){
+      if(!board[col[a]]) continue;
+      for(let b=a+1;b<col.length;b++){
+        if(!board[col[b]]) continue;
+        if(board[col[a]].value===board[col[b]].value)
+          list.push({axis:c, idxA:col[a], idxB:col[b]});
+      }
+    }
+  }
+  return list;
+}
+
+function collectRowConflicts(){
+  const list=[];
+  for(let r=0;r<S;r++){
+    const row=rowOf(r*S);
+    for(let a=0;a<row.length;a++){
+      if(!board[row[a]]) continue;
+      for(let b=a+1;b<row.length;b++){
+        if(!board[row[b]]) continue;
+        if(board[row[a]].value===board[row[b]].value)
+          list.push({axis:r, idxA:row[a], idxB:row[b]});
+      }
+    }
+  }
+  return list;
+}
+
+async function doOneStep(conflicts, phase, spd){
+  // Pick conflict involving protected cell; else first
+  const chosen=conflicts.find(f=>protected_.has(f.idxA)||protected_.has(f.idxB))
+               ||conflicts[0];
+  const {axis,idxA,idxB}=chosen;
+
+  // Protected card stays; other moves
+  const mover=protected_.has(idxA)?idxB:protected_.has(idxB)?idxA:idxB;
+  const mRow=Math.floor(mover/S);
+  const mCol=mover%S;
+  const bc=blockCells(blockIdOf(mover));
+
+  let candidates, getStep, applyStep;
+
+  if(phase==='col'){
+    // Move HORIZONTALLY: same row, different col, within same block
+    candidates=bc.filter(i=>Math.floor(i/S)===mRow&&i!==mover);
+    getStep=i=>(i%S)-(mover%S);
+    applyStep=step=>mover+step;
+  } else {
+    // Move VERTICALLY: same col, different row, within same block
+    candidates=bc.filter(i=>(i%S)===mCol&&i!==mover);
+    getStep=i=>Math.floor(i/S)-Math.floor(mover/S);
+    applyStep=step=>mover+step*S;
+  }
+
+  if(!candidates.length){
+    setStatus('⚠ Нет хода — блок заблокирован.','err');
+    document.getElementById('solve-btn').disabled=false;
+    return;
+  }
+
+  let toIdx;
+  if(chainStep!==null){
+    // Enforce chain step
+    toIdx=applyStep(chainStep);
+    if(!candidates.includes(toIdx)){
+      setStatus(`⚠ Цепочка заблокирована (шаг ${chainStep}).`,'err');
+      document.getElementById('solve-btn').disabled=false;
+      return;
+    }
+  } else {
+    // First move: pick best, lock step
+    const mVal=board[mover].value;
+    const good=candidates.filter(i=>{
+      if(phase==='col'){
+        return !colOf(i).some(ci=>ci!==i&&board[ci]&&board[ci].value===mVal);
+      } else {
+        return !rowOf(i).some(ri=>ri!==i&&board[ri]&&board[ri].value===mVal);
+      }
+    });
+    const gEmp=good.filter(i=>!board[i]);
+    const gFul=good.filter(i=>board[i]);
+    const aEmp=candidates.filter(i=>!board[i]);
+    toIdx=gEmp.length?gEmp[0]:gFul.length?gFul[0]:aEmp.length?aEmp[0]:candidates[0];
+    chainStep=getStep(toIdx);
+  }
+
+  // Validate direction
+  if(phase==='col' && Math.floor(toIdx/S)!==mRow){
+    setStatus('⚠ Ошибка: не горизонталь!','err');
+    document.getElementById('solve-btn').disabled=false;
+    return;
+  }
+  if(phase==='row' && (toIdx%S)!==mCol){
+    setStatus('⚠ Ошибка: не вертикаль!','err');
+    document.getElementById('solve-btn').disabled=false;
+    return;
+  }
+
+  const cA=board[mover], cB=board[toIdx];
+  board[mover]=cB||null; board[toIdx]=cA;
+  lastMoved=cB?mover:toIdx;
+  protected_=new Set([lastMoved]);
+  chainMoves++;
+
+  const dir=phase==='col'?(chainStep>0?'→':'←'):(chainStep>0?'↓':'↑');
+  const phaseLabel=phase==='col'?'кол':'стр';
+  const blockLabel=blockIdOf(mover)+1;
+  const msg=cB
+    ?`[#${chainMoves} ${dir}${Math.abs(chainStep)}] б${blockLabel} ${phaseLabel}${axis+1}: ${cA.value}↔${cB.value} [${mover+1}${dir}${toIdx+1}]`
+    :`[#${chainMoves} ${dir}${Math.abs(chainStep)}] б${blockLabel} ${phaseLabel}${axis+1}: ${cA.value}${dir} [${mover+1}→${toIdx+1}]`;
+
+  history.push({boardAfter:board.map(x=>x?{...x}:null),handAfter:[...hand],highlightIdx:toIdx,fromIdx:mover,msg,type:'solver'});
+  histPos=history.length;
+  addLog(msg,'log-move');
+  await animateMove(mover,toIdx,spd);
+}
+
+// ── ANIMATION ─────────────────────────────────────────────
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+
+async function animateMove(fromIdx,toIdx,ms){
+  const elFrom=document.querySelector(`.cell[data-idx="${fromIdx}"]`);
+  const elTo  =document.querySelector(`.cell[data-idx="${toIdx}"]`);
+  if(!elFrom||!elTo){render();markConflicts();await delay(ms);return;}
+
+  const rF=elFrom.getBoundingClientRect(), rT=elTo.getBoundingClientRect();
+  const ghost=document.createElement('div');
+  ghost.style.cssText=`position:fixed;left:${rF.left}px;top:${rF.top}px;width:${rF.width}px;height:${rF.height}px;background:rgba(232,193,58,.88);border:2px solid var(--gold);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:${rF.height*.45}px;color:var(--ink);z-index:9999;pointer-events:none;transition:left ${ms*.8}ms cubic-bezier(.4,0,.2,1),top ${ms*.8}ms cubic-bezier(.4,0,.2,1),opacity ${ms*.15}ms ease ${ms*.82}ms;`;
+  ghost.textContent=board[toIdx]?board[toIdx].value:'';
+  document.body.appendChild(ghost);
+  elFrom.style.opacity='.2';
+  elTo.style.outline='2px solid rgba(192,57,43,.5)';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    ghost.style.left=rT.left+'px';ghost.style.top=rT.top+'px';ghost.style.opacity='0';
+  }));
+  await delay(ms);
+  ghost.remove();
+  render();
+  const elNew=document.querySelector(`.cell[data-idx="${toIdx}"]`);
+  if(elNew) elNew.classList.add('just-moved');
+  markConflicts();
+}
+
+// ── REPLAY ────────────────────────────────────────────────
+function stepBack(){
+  if(!history.length||histPos<=0) return;
+  histPos--; showHistStep(histPos); updateNavButtons();
+}
+function stepForward(){
+  if(!history.length||histPos>=history.length) return;
+  histPos++;
+  if(histPos===history.length) restoreLive();
+  else showHistStep(histPos);
+  updateNavButtons();
+}
+function showHistStep(pos){
+  const s=history[pos];
+  board=s.boardAfter.map(x=>x?{...x}:null);
+  hand=s.handAfter?[...s.handAfter]:[...hand];
+  render();
+  const el=document.querySelector(`.cell[data-idx="${s.highlightIdx}"]`);
+  if(el) el.classList.add('just-moved','replay-hl');
+  markConflicts(); hlLogEntry(pos);
+  document.getElementById('step-info').textContent=`Ход ${pos+1}/${history.length}`;
+  setStatus(`↺ ${s.msg}`,'solving');
+  renderHand();
+}
+function restoreLive(){
+  const last=history[history.length-1];
+  if(last){board=last.boardAfter.map(x=>x?{...x}:null);hand=[...liveHand];}
+  histPos=history.length;
+  render();markConflicts();renderHand();setStatus('Текущее состояние.','ok');
+}
+function hlLogEntry(pos){
+  document.querySelectorAll('.log-entry').forEach(e=>e.classList.toggle('log-cur',+e.dataset.stepPos===pos));
+  const cur=document.querySelector('.log-entry.log-cur');
+  if(cur) cur.scrollIntoView({block:'nearest',inline:'center'});
+}
+function updateNavButtons(){
+  const has=history.length>0;
+  document.getElementById('back-btn').disabled=!has||histPos<=0;
+  document.getElementById('fwd-btn').disabled=!has||histPos>=history.length;
+  const si=document.getElementById('step-info');
+  if(has&&histPos>=0&&histPos<history.length) si.textContent=`Ход ${histPos+1}/${history.length}`;
+  else if(has) si.textContent=`${history.length} ходов`;
+  else si.textContent='';
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function render(){
+  const wrap=document.getElementById('board-wrap');
+  wrap.innerHTML='';
+  if(!S) return;
+
+  // Cell size: fit in viewport width (minus padding), also height
+  const availW=Math.min(window.innerWidth-36, window.innerWidth*.95);
+  const availH=Math.max(120, window.innerHeight-320);
+  const cellByW=Math.floor(availW/S);
+  const cellByH=Math.floor(availH/S);
+  const cellPx=Math.max(22,Math.min(58,Math.min(cellByW,cellByH)));
+  const fSize=Math.round(cellPx*.46)+'px';
+  const eFSize=Math.max(8,Math.round(cellPx*.2))+'px';
+
+  const colConf=getColConflicts();
+  const rowConf=getRowConflicts();
+
+  // Outer grid: N×N blocks
+  const grid=document.createElement('div');
+  grid.className='sudoku-grid';
+  // Border between blocks: 2px; within block: 1px
+  // Use CSS grid with gap trick
+  grid.style.gridTemplateColumns=`repeat(${N},auto)`;
+  grid.style.gridTemplateRows=`repeat(${N},auto)`;
+  // Add inner block borders via outline on blocks
+  grid.style.border='3px solid var(--ink)';
+  grid.style.display='inline-grid';
+  grid.style.gap='2px';
+  grid.style.background='var(--ink)'; // gap shows as dark lines between blocks
+
+  for(let bid=0;bid<S;bid++){
+    const block=document.createElement('div');
+    block.className='quad-block';
+    block.style.display='grid';
+    block.style.gridTemplateColumns=`repeat(${N},${cellPx}px)`;
+    block.style.gridTemplateRows=`repeat(${N},${cellPx}px)`;
+    block.style.gap='0';
+
+    const cells=blockCells(bid);
+    cells.forEach(idx=>{
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.idx=idx;
+      cell.style.width=cellPx+'px';
+      cell.style.height=cellPx+'px';
+
+      const entry=board[idx];
+      if(entry){
+        cell.textContent=entry.value;
+        cell.dataset.val=entry.value;
+        cell.style.fontSize=fSize;
+        if(entry.source==='pre') cell.classList.add('filled-pre');
+        else cell.classList.add('filled');
+        const inCol=colConf.has(idx), inRow=rowConf.has(idx);
+        if(inCol&&inRow) cell.classList.add('conflict-both');
+        else if(inCol) cell.classList.add('conflict-col');
+        else if(inRow) cell.classList.add('conflict-row');
+      } else {
+        cell.classList.add('empty');
+        cell.style.fontSize=eFSize;
+        cell.textContent=idx+1;
+        if(selectedCard) cell.classList.add('sel-target');
+        cell.addEventListener('click',()=>placeCardOnCell(idx));
+      }
+      block.appendChild(cell);
+    });
+    grid.appendChild(block);
+  }
+  wrap.appendChild(grid);
+}
+
+function markConflicts(){
+  const colConf=getColConflicts(), rowConf=getRowConflicts();
+  document.querySelectorAll('.cell').forEach(el=>{
+    const i=parseInt(el.dataset.idx);
+    el.classList.remove('conflict-col','conflict-row','conflict-both');
+    const inCol=colConf.has(i), inRow=rowConf.has(i);
+    if(inCol&&inRow) el.classList.add('conflict-both');
+    else if(inCol) el.classList.add('conflict-col');
+    else if(inRow) el.classList.add('conflict-row');
+  });
+}
+
+// ── STATUS & LOG ──────────────────────────────────────────
+function setStatus(msg,type=''){
+  const el=document.getElementById('status');
+  el.textContent=msg; el.className=type;
+}
+function addLog(msg,cls=''){
+  const log=document.getElementById('log');
+  const d=document.createElement('div');
+  d.className='log-entry'+(cls?' '+cls:'');
+  d.textContent=msg;
+  d.dataset.stepPos=cls==='log-move'?(history.length-1):-1;
+  log.appendChild(d);
+  while(log.children.length>200) log.removeChild(log.firstChild);
+  log.scrollLeft=log.scrollWidth;
+}
+function clearLog(){document.getElementById('log').innerHTML='';}
+
+document.getElementById('speed').addEventListener('input',function(){
+  document.getElementById('speed-label').textContent=this.value+'ms';
+});
+
+initGame();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js', {scope: './'}).catch(e=>console.warn('SW:',e));
+}
+</script>
+</body>
+</html>
